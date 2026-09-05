@@ -1,11 +1,8 @@
 # FRAC-MARL
 
-Byzantine-resilient multi-agent actor-critic reinforcement learning on a cooperative
-formation task. A team of decentralized agents learns to reach an evenly-spaced
-formation around a shared landmark, exchanging critic/team-reward weights with their
-neighbors over a communication graph that may include corrupted (Byzantine) edges. This
-repo implements one undefended baseline and three Byzantine-resilient defenses, and
-benchmarks them against each other under simulated attacks.
+This repository provides an implementation of **Fully Resilient Actor-Critic Multi-Agent Reinforcement Learning (FRAC-MARL)**, a Byzantine-resilient multi-agent actor-critic reinforcement learning algorithm. We evaluate FRAC-MARL on the cooperative formation control task from [MPE2](https://mpe2.farama.org/environments/simple_formation/), in which a team of decentralized agents learns to achieve an evenly spaced formation around a shared landmark.
+
+During training, agents exchange critic and team-reward weights with their neighbors over a communication graph that may contain corrupted (Byzantine) edges. The repository includes one undefended baseline and three Byzantine-resilient defense mechanisms, enabling direct comparison of their performance under simulated Byzantine attacks.
 
 ## Contents
 
@@ -27,7 +24,7 @@ each consensus round (`build_agents`/`consensus_update` in `train.py`).
 | `normal` | `Agent` | No defense. Fixed-weight consensus average over every accepted peer (own weight = 1 − #peers/n). Run with `F_BUDGET=0` as the attack-free baseline. |
 | `naive` | `Agent` | The same undefended agent, but run with `F_BUDGET=F_BUDGET_G` so it's exposed to attacks with nothing in place - shows what an undefended team looks like under attack. |
 | `resilient` | `Redundancy_Agent` | Two-round message relay + a `tau`-threshold majority vote (`redundancy_filter`) across the graph's redundant paths, then the same fixed-weight averaging over whatever passed the filter. |
-| `projection` | `Projection_Agent` | PyTorch port of the RPBCAC agent from Ye et al. (2024, see [References](#references)): projects each candidate through the local network to recover its implied error, trims the outliers, replaces the hidden layers with the trimmed mean, then fits the network to the trimmed team error by gradient descent. |
+| `projection` | `Projection_Agent` | PyTorch port of Algorithm 2 from Ye et al. (2024, see [References](#references)): projects each candidate through the local network to recover its implied error, trims the outliers, replaces the hidden layers with the trimmed mean, then fits the network to the trimmed team error by gradient descent. |
 | `trimmed_mean` | `Trim_Mean_Agent` | Byrd-TD(λ) baseline from Wu et al. (2021): accepts every message unconditionally, and instead trims each parameter coordinate-wise (drops the F largest/smallest peer values per coordinate) before averaging. |
 
 A shared `simulate_attack()` on the base `Agent` optionally corrupts a message on the
@@ -36,12 +33,12 @@ threat model every defense above is evaluated against.
 
 ## Task
 
-Agents act in `mpe2`'s `simple_formation_v1` environment (wrapped by
+Agents act in `mpe2`'s [`simple_formation_v1` environment](https://mpe2.farama.org/environments/simple_formation/) (wrapped by
 `environment/mpe_formation_env.py`): N agents choose one of 5 discrete actions each step
-(no-op, or move in one of 4 directions) to arrange themselves evenly around a shared
+(no movement, or move in one of 4 directions) to arrange themselves evenly around a shared
 landmark. Reward is each agent's own (negated) distance to its currently-assigned slot
 on the formation circle; an episode succeeds once the whole team is within the target
-radius of its formation.
+radius of its formation. 
 
 ## Repository layout
 
