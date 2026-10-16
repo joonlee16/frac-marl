@@ -16,16 +16,17 @@ During training, agents exchange critic and team-reward weights with their neigh
 ## Defenses
 
 Every agent trains an actor, a critic, and a team-reward network via the same local
-gradient steps; they differ only in how they exchange and aggregate neighbors' weights
+gradient steps, following the decentralized actor-critic of Zhang et al. (2018) [[1]](#references);
+they differ only in how they exchange and aggregate neighbors' weights
 each consensus round (`build_agents`/`consensus_update` in `train.py`).
 
 | `mode` | Agent class | Defense |
 |---|---|---|
-| `normal` | `Agent` | No defense. Fixed-weight consensus average over every accepted peer (own weight = 1 − #peers/n). Run with `F_BUDGET=0` as the attack-free baseline. |
+| `normal` | `Agent` | No defense. Fixed-weight consensus average over every accepted peer (own weight = 1 − #peers/n) [[1]](#references). Run with `F_BUDGET=0` as the attack-free baseline. |
 | `naive` | `Agent` | The same undefended agent, but run with `F_BUDGET=F_BUDGET_G` so it's exposed to attacks with nothing in place - shows what an undefended team looks like under attack. |
 | `resilient` | `Redundancy_Agent` | Two-round message relay + a `tau`-threshold majority vote (`redundancy_filter`) across the graph's redundant paths, then the same fixed-weight averaging over whatever passed the filter. |
-| `projection` | `Projection_Agent` | PyTorch port of Algorithm 2 from Ye et al. (2024, see [References](#references)): projects each candidate through the local network to recover its implied error, trims the outliers, replaces the hidden layers with the trimmed mean, then fits the network to the trimmed team error by gradient descent. |
-| `trimmed_mean` | `Trim_Mean_Agent` | Byrd-TD(λ) baseline from Wu et al. (2021): accepts every message unconditionally, and instead trims each parameter coordinate-wise (drops the F largest/smallest peer values per coordinate) before averaging. |
+| `projection` | `Projection_Agent` | PyTorch port of Algorithm 2 from Ye et al. (2024) [[2]](#references): projects each candidate through the local network to recover its implied error, trims the outliers, replaces the hidden layers with the trimmed mean, then fits the network to the trimmed team error by gradient descent. |
+| `trimmed_mean` | `Trim_Mean_Agent` | Byrd-TD(λ) baseline from Wu et al. (2021) [[3]](#references): accepts every message unconditionally, and instead trims each parameter coordinate-wise (drops the F largest/smallest peer values per coordinate) before averaging. |
 
 A shared `simulate_attack()` on the base `Agent` optionally corrupts a message on the
 wire with a directional bias, up to a per-round attack budget - this is the Byzantine
@@ -34,7 +35,7 @@ threat model every defense above is evaluated against.
 ## Task
 
 Agents act in `mpe2`'s [`simple_formation_v1` environment](https://mpe2.farama.org/environments/simple_formation/) (wrapped by
-`environment/mpe_formation_env.py`): N agents choose one of 5 discrete actions each step
+`environment/mpe_formation_env.py`): n agents choose one of 5 discrete actions each step
 (no movement, or move in one of 4 directions) to arrange themselves evenly around a shared
 landmark. Reward is each agent's own (negated) distance to its currently-assigned slot
 on the formation circle; an episode succeeds once the whole team is within the target
@@ -108,15 +109,17 @@ one smoothed curve per mode with a shaded uncertainty band (`--shade std|sem|min
 
 ## References
 
-1. Zhang, K., Yang, Z., Liu, H., Zhang, T., & Başar, T. (2018). [Fully Decentralized
-   Multi-Agent Reinforcement Learning with Networked Agents](https://proceedings.mlr.press/v80/zhang18n.html).
-   ICML 2018. - the base decentralized actor-critic algorithm `Agent` implements.
-2. Ye, L., Figura, M., Lin, Y., Pal, M., Das, P., Liu, J., & Gupta, V. (2024). [Resilient
-   Multi-Agent Reinforcement Learning With Function Approximation](https://doi.org/10.1109/TAC.2024.3409676).
-   IEEE Transactions on Automatic Control. - `Projection_Agent` is a PyTorch port of this
-   paper's Algorithm 2, adapted from the authors'
+[1] Zhang, K., Yang, Z., Liu, H., Zhang, T., & Başar, T. (2018). [Fully Decentralized
+    Multi-Agent Reinforcement Learning with Networked Agents](https://proceedings.mlr.press/v80/zhang18n.html).
+    ICML 2018. - the base decentralized actor-critic algorithm `Agent` implements.
+    
+[2] Ye, L., Figura, M., Lin, Y., Pal, M., Das, P., Liu, J., & Gupta, V. (2024). [Resilient
+    Multi-Agent Reinforcement Learning With Function Approximation](https://doi.org/10.1109/TAC.2024.3409676).
+    IEEE Transactions on Automatic Control. - `Projection_Agent` is a PyTorch port of this
+    paper's Algorithm 2, adapted from the authors'
    [reference implementation](https://github.com/mainakpal08/Resilient-consensus-based-MARL/tree/v1).
-3. Wu, Z., Shen, H., Chen, T., & Ling, Q. (2021). [Byzantine-Resilient Decentralized
-   Policy Evaluation With Linear Function Approximation](https://ieeexplore.ieee.org/document/9462519).
-   IEEE Transactions on Signal Processing, 69, 3839–3853. - `Trim_Mean_Agent` reproduces
-   this paper's Byrd-TD(λ) aggregation rule with λ=0.
+   
+[3] Wu, Z., Shen, H., Chen, T., & Ling, Q. (2021). [Byzantine-Resilient Decentralized
+    Policy Evaluation With Linear Function Approximation](https://ieeexplore.ieee.org/document/9462519).
+    IEEE Transactions on Signal Processing, 69, 3839–3853. - `Trim_Mean_Agent` reproduces
+    this paper's Byrd-TD(λ) aggregation rule with λ=0.
